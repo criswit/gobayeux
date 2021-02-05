@@ -18,6 +18,7 @@ type config struct {
 	Protocol    string
 	Path        string
 	LogLevel    string
+	AccessToken string
 }
 
 func main() {
@@ -30,6 +31,7 @@ func main() {
 	flags.StringVar(&cfg.Hostname, "hostname", "", "the hostname to connect to")
 	flags.StringVar(&cfg.Path, "path", "", "the path used to connect to bayeux")
 	flags.StringVar(&cfg.LogLevel, "loglevel", "error", "the level to log at")
+	flags.StringVar(&cfg.AccessToken, "accesstoken", "", "the oauth access token")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		fmt.Printf("error parsing flags: %q\n", err)
 		os.Exit(1)
@@ -55,7 +57,7 @@ func main() {
 	logger.SetLevel(level)
 
 	u := url.URL{Scheme: cfg.Protocol, Host: fmt.Sprintf("%s:%d", cfg.Hostname, cfg.Port), Path: cfg.Path}
-	client, err := gobayeux.NewClient(u.String(), gobayeux.WithLogger(logger))
+	client, err := gobayeux.NewClient(u.String(), gobayeux.WithLogger(logger), gobayeux.WithOAuthToken(cfg.AccessToken))
 	if err != nil {
 		fmt.Printf("error initializing client: %q\n", err)
 		os.Exit(1)

@@ -25,6 +25,7 @@ type Options struct {
 	Logger    logrus.FieldLogger
 	Client    *http.Client
 	Transport http.RoundTripper
+	Token     string
 }
 
 type Option func(*Options)
@@ -50,6 +51,14 @@ func WithHTTPTransport(transport http.RoundTripper) Option {
 	}
 }
 
+//WithOAuthToken returns an Option with custom OAuth Token
+func WithOAuthToken(token string) Option {
+	return func(options *Options) {
+		options.Token = token
+	}
+
+}
+
 // NewClient creates a new high-level client
 func NewClient(serverAddress string, opts ...Option) (*Client, error) {
 	options := &Options{}
@@ -67,7 +76,7 @@ func NewClient(serverAddress string, opts ...Option) (*Client, error) {
 		options.Logger = l
 	}
 
-	bc, err := NewBayeuxClient(options.Client, options.Transport, serverAddress, options.Logger)
+	bc, err := NewBayeuxClient(options.Client, options.Transport, serverAddress, options.Logger, options.Token)
 	if err != nil {
 		return nil, err
 	}

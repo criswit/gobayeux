@@ -24,10 +24,18 @@ type BayeuxClient struct {
 	state         *clientState
 	exts          []MessageExtender
 	logger        logrus.FieldLogger
+	sfdc          SalesforceAuthContainer
+}
+
+// SalesforceAuthContainer is a way of containing cookies/access token required
+// for Salesforce CometD connections
+type SalesforceAuthContainer struct {
+	token   string
+	cookies []*http.Cookie
 }
 
 // NewBayeuxClient initializes a BayeuxClient for the user
-func NewBayeuxClient(client *http.Client, transport http.RoundTripper, serverAddress string, logger logrus.FieldLogger) (*BayeuxClient, error) {
+func NewBayeuxClient(client *http.Client, transport http.RoundTripper, serverAddress string, logger logrus.FieldLogger, token string) (*BayeuxClient, error) {
 	if client == nil {
 		client = http.DefaultClient
 
@@ -51,12 +59,15 @@ func NewBayeuxClient(client *http.Client, transport http.RoundTripper, serverAdd
 		logger = logrus.New()
 	}
 
+	sfdcAuth := SalesforceAuthContainer{token: token}
+
 	return &BayeuxClient{
 		stateMachine:  NewConnectionStateMachine(),
 		client:        client,
 		serverAddress: parsedAddress,
 		state:         &clientState{},
 		logger:        logger,
+		sfdc:          sfdcAuth,
 	}, nil
 }
 
@@ -287,6 +298,15 @@ func (b *BayeuxClient) request(ctx context.Context, ms []Message) (*http.Respons
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", b.sfdc.token))
+
+	// Here we add Salesforce specific cookies for domain and URI path to send back
+	// to Salesforce CometD Server as per specifications
+	// ref: https://developer.salesforce.com/docs/atlas.en-us.api_streaming.meta/api_streaming/intro_client_specs.htm
+
+	for _, cookie := range b.sfdc.cookies {
+		req.AddCookie(cookie)
+	}
 
 	return b.client.Do(req)
 }
