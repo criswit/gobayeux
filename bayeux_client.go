@@ -119,6 +119,12 @@ func (b *BayeuxClient) Handshake(ctx context.Context) ([]Message, error) {
 		return response, fmt.Errorf("handshake was not successful: %s", message.Error)
 	}
 	b.state.SetClientID(message.ClientID)
+	// set token and cookies
+	sfdc := SalesforceAuthContainer{
+		token: message.ClientID,
+		cookies: resp.Cookies(),
+	}
+	b.sfdc = sfdc
 	_ = b.stateMachine.ProcessEvent(successfullyConnected)
 	logger.WithField("duration", time.Since(start)).Debug("finishing")
 	return response, nil
